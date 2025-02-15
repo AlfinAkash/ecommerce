@@ -35,6 +35,51 @@ exports.signup = async (req, res) => {
 };
 
 
+
+
+
+exports.verifyOtpAndSignup = async (req, res) => {
+    const { name, email, password, otp } = req.body;
+
+    if (!otp || !email || !password || !name) {
+        return res.status(400).json({ message: "All fields are required" });
+    }
+
+    try {
+        // Check if OTP exists
+        const storedOtpData = otpStore.get(email);
+        if (!storedOtpData || storedOtpData.otp !== otp) {
+            return res.status(400).json({ message: "Invalid OTP or expired" });
+        }
+
+        // Remove OTP after verification
+        otpStore.delete(email);
+
+        // Hash password
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        // Insert user into DB
+        await db.execute("INSERT INTO users (name, email, password, isVerified) VALUES (?, ?, ?, ?)", 
+            [name, email, hashedPassword, true]);
+
+        // Get newly created user
+        const [newUser] = await db.execute("SELECT id FROM users WHERE email = ?", [email]);
+
+        // Generate JWT token
+        const token = jwt.sign({ userId: newUser[0].id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+
+        // Store JWT in cookie
+        res.cookie('token', token, { httpOnly: true, secure: false, sameSite: 'strict', maxAge: 3600000 });
+
+        res.json({ message: "Signup successful!", token });
+    } catch (error) {
+        console.error("OTP Verification Error:", error);
+        res.status(500).json({ message: "Internal Server Error" });
+    }
+};
+
+
+
 // OTP Verification (Without Storing in DB)
 exports.verifyOTP = async (req, res) => {
     const { email, otp, name, password } = req.body;

@@ -1,48 +1,32 @@
 import React, { useEffect, useState } from 'react';
-import { getProducts, selectProduct } from '../../api/api';
+import { getCartItems } from '../../api/api';
+import { handlePayment } from '../../utils/razorpay';
 
-const Checkout = ({ onProceedToPayment }) => {
-    const [cart, setCart] = useState([]);
+const Checkout = () => {
+    const [cartItems, setCartItems] = useState([]);
+    const [total, setTotal] = useState(0);
 
     useEffect(() => {
-        const fetchCartItems = async () => {
-            try {
-                const response = await getProducts(); // Replace with API call to fetch selected items
-                setCart(response.data);
-            } catch (error) {
-                console.error("Error fetching cart items:", error);
-            }
+        const fetchCart = async () => {
+            const { data } = await getCartItems();
+            setCartItems(data);
+            setTotal(data.reduce((sum, item) => sum + item.price, 0));
         };
-        fetchCartItems();
+        fetchCart();
     }, []);
 
-    const handleRemove = (productId) => {
-        setCart(cart.filter(item => item.id !== productId));
-    };
-
-    const getTotalAmount = () => {
-        return cart.reduce((total, item) => total + item.price, 0);
-    };
-
     return (
-        <div>
+        <div className="checkout-container">
             <h2>Checkout</h2>
-            {cart.length === 0 ? (
-                <p>Your cart is empty.</p>
-            ) : (
-                <>
-                    <ul>
-                        {cart.map((item) => (
-                            <li key={item.id}>
-                                {item.name} - ₹{item.price} 
-                                <button onClick={() => handleRemove(item.id)}>Remove</button>
-                            </li>
-                        ))}
-                    </ul>
-                    <h3>Total: ₹{getTotalAmount()}</h3>
-                    <button onClick={onProceedToPayment}>Proceed to Payment</button>
-                </>
-            )}
+            <ul>
+                {cartItems.map((item) => (
+                    <li key={item.id}>
+                        {item.name} - ₹{item.price}
+                    </li>
+                ))}
+            </ul>
+            <h3>Total: ₹{total}</h3>
+            <button onClick={() => handlePayment(total)}>Pay with Razorpay</button>
         </div>
     );
 };

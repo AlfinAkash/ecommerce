@@ -5,8 +5,8 @@ const authMiddleware = require("../utils/authMiddleware"); // Import auth middle
 
 // ✅ Apply authMiddleware to signup, verify-email, and login
 router.post("/signup", authController.signup);
-router.post("/login", authMiddleware, authController.login);
-router.post("/verify-otp", authController.verifyOTP); // ✅ Add verifyOTP route
+router.post("/login",  authController.login);
+router.post("/verify-otp", authController.verifyOtpAndSignup); // ✅ Add verifyOTP route
 
 
 
